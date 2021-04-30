@@ -26,7 +26,6 @@ public class StoreController {
 	//데이터 베이스 연결 
 	@Autowired
 	DataSource dataSource;
-
 	//데이터 베이스 연결이 되는지 확인하는 용도
 	@RequestMapping("")
 	public String Hello() {
