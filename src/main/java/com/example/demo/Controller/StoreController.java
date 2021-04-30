@@ -19,13 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import Model.Today;
 
-
+// 컨트롤러
 @RestController
 public class StoreController {
 	
+	//데이터 베이스 연결 
 	@Autowired
 	DataSource dataSource;
-	//DataSourceConfiguration dataSource;
+
+	//데이터 베이스 연결이 되는지 확인하는 용도
 	@RequestMapping("")
 	public String Hello() {
 		Connection connection = null;
@@ -43,6 +45,8 @@ public class StoreController {
 		}
 		return answer;
 	}
+	
+	//테스트 용도로 마음껏 바꾸셔도 됩니다. 
 	@RequestMapping("test")
 	public String Find() {
 		Connection connection = null;
@@ -61,6 +65,11 @@ public class StoreController {
 		}
 		return answer;
 	}
+	
+	/*제휴 가게 추가 
+		먼저 해당 들어가게 될 ID (STORE PRIMARYKEY )를 찾은 후에 해당 ID 값을 바탕으로 BUSSINESSTIMES DB 에 bussiness의 데이터들을 넣음
+		그 후 Store DB에 저장 
+	*/
 	@RequestMapping(value = "/AddStore" , method = RequestMethod.POST , produces = "application/json; charset=utf8")
 	public String AddStore(@RequestBody HashMap<String,Object> params) {
 		String answer = "";
@@ -119,6 +128,11 @@ public class StoreController {
 		 }
 		return answer;
 	}
+	
+	/*
+	 * 공휴일 및 휴일 지정 API 
+	 * ID 와 holidays 를 받아와서 Holiday Table 에 저장 
+	 */
 	@RequestMapping(value = "/holidays" , method = RequestMethod.POST , produces = "application/json; charset=utf8")
 	public String Holidays(@RequestBody HashMap<String, Object> params){
 		 Object objId = new Object();
@@ -129,7 +143,6 @@ public class StoreController {
 		 temp=temp.substring(1,temp.length()-1);
 		 temp=temp.replaceAll(" ", "");
 		 String[] holidays = temp.split(",");
-		 String sql = "INSERT INTO HOLIDAYS ";
 		 Connection connection = null;
 		 String answer ="";
 		 PreparedStatement pstmt;
@@ -148,10 +161,14 @@ public class StoreController {
 		}
 		return answer;
 	}
+	
+	/*
+	 * 테이블에 있는 내용 level ( 등급) 에 따라 정렬하여 점포명 요약 등급 현재영업상태 등을 보여줌
+	 */
 	@RequestMapping("/ShowStore")
 	public String SHOWSTORELIST() {
-		String answer = "";
-		Connection connection = null;
+		
+		Connection connection = null;// DB Connection
 		PreparedStatement pstmt;
 		JSONArray jsonArray =new JSONArray();
 		Today today = new Today();
@@ -209,6 +226,10 @@ public class StoreController {
 		return jsonArray.toString();
 	}
 	
+	/*
+	 * 점포 상세 조회 id 를 통해 검색
+	 * 오늘을 기준으로 3일의 데이터를 가져옴 
+	 */
 	@RequestMapping(value ="/DetailShow" , method = RequestMethod.POST , produces = "appication/json; charset=utf-8")
 	public String DetaliShow(@RequestBody int id) {
 		Connection connection =null;
@@ -221,7 +242,7 @@ public class StoreController {
 		try {
 			connection = dataSource.getConnection();
 			pstmt = connection.prepareStatement(query);
-			ResultSet rs = pstmt.executeQuery();
+			ResultSet rs = pstmt.executeQuery();// 점포 테이블 조회 저장 SET
 			while(rs.next()) {
 				ID = rs.getInt("ID");
 				name = rs.getString("NAME");
@@ -230,6 +251,7 @@ public class StoreController {
 				address = rs.getString("ADDRESS");
 				phone = rs.getString("PHONE");
 				jsonobject.put("id",ID);
+				
 				jsonobject.put("name",name);
 				jsonobject.put("description",description);
 				jsonobject.put("level",level);
@@ -238,11 +260,12 @@ public class StoreController {
 				
 				String BussinessQuery = "select DAY , OPEN , CLOSE from BUSSINESSTIMES where STOREID=" + Integer.toString(id)+";";
 				pstmt = connection.prepareStatement(BussinessQuery);
-				ResultSet rs2 = pstmt.executeQuery();
+				ResultSet rs2 = pstmt.executeQuery(); // 점포의 운영 데이터 저장 SET
+				
 				int count = 0;
 				String HolidayQuery = "select Holidays from Holiday where STOREID =" +Integer.toString(id);
 				pstmt = connection .prepareStatement(HolidayQuery);
-				ResultSet rs3 = pstmt.executeQuery();
+				ResultSet rs3 = pstmt.executeQuery(); // 휴무일 저장 SET
 				boolean[] holi = new boolean[3];
 				HashSet<String> set = new HashSet<>();
 				while(rs3.next()) {
@@ -259,6 +282,7 @@ public class StoreController {
 				}
 				today = new Today();
 				JSONArray jsonArray = new JSONArray();
+			
 				while(rs2.next()) {
 					String day = rs2.getString("DAY");
 					String open = rs2.getString("OPEN");
@@ -273,7 +297,7 @@ public class StoreController {
 						System.out.println(open);
 						System.out.println(close);
 						String status;
-						if(today.changeTime(open) <= today.minute && today.changeTime(close) >= today.minute) {
+						if(today.changeTime(open) <= today.minute && today.changeTime(close) >= today.minute) { // 시간 계산 
 							if(holi[0]) tempJson.put("status","HOLIDAY");
 							else tempJson.put("status","OPEN");
 							System.out.println(tempJson.get("status"));
@@ -349,6 +373,9 @@ public class StoreController {
 		}
 		return jsonobject.toString();
 	}
+	/*
+	 * 제휴 만료로 인한 삭제
+	 */
 	@RequestMapping(value = "/DeleteStore" , method = RequestMethod.POST , produces = "application/json; charset=utf-8")
 	public void DeleteStore(@RequestBody int id) {
 		Connection connection =null;
